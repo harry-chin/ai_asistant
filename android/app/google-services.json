@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "296629836637",
+    "project_id": "jins-ai-assistant",
+    "storage_bucket": "jins-ai-assistant.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:296629836637:android:01c1deeae6db9eb157e6b4",
+        "android_client_info": {
+          "package_name": "com.jin.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCr6vf4QHEREkNBfH8k-W4zupXOBa-iuhM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

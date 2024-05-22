@@ -1,0 +1,25 @@
+{
+    "flutter": {
+        "platforms": {
+            "android": {
+                "default": {
+                    "projectId": "jins-ai-assistant",
+                    "appId": "1:296629836637:android:01c1deeae6db9eb157e6b4",
+                    "fileOutput": "android/app/google-services.json"
+                }
+            },
+            "dart": {
+                "lib/firebase_options.dart": {
+                    "projectId": "jins-ai-assistant",
+                    "configurations": {
+                        "android": "1:296629836637:android:01c1deeae6db9eb157e6b4",
+                        "ios": "1:296629836637:ios:85a285b96ab9d09257e6b4",
+                        "macos": "1:296629836637:ios:85a285b96ab9d09257e6b4",
+                        "web": "1:296629836637:web:ab5ed0edbd66a32357e6b4",
+                        "windows": "1:296629836637:web:57eb56e80daa37ec57e6b4"
+                    }
+                }
+            }
+        }
+    }
+}
