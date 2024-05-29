@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:ai_assistant/services/auth_service.dart';
 import 'package:ai_assistant/services/openai_service.dart';
 import 'package:flutter_highlight/flutter_highlight.dart';
-import 'package:flutter_highlight/themes/github.dart';
-import 'package:highlight/highlight.dart'; // Correct import
-import 'package:flutter/services.dart'; // For Clipboard
-import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:flutter_highlight/themes/atom-one-dark.dart';
+import 'package:highlight/highlight.dart';
+import 'package:flutter/services.dart';
+import 'login_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class AiAssistantScreen extends StatefulWidget {
   @override
@@ -14,10 +16,8 @@ class AiAssistantScreen extends StatefulWidget {
 class _AiAssistantScreenState extends State<AiAssistantScreen> {
   final TextEditingController _questionController = TextEditingController();
   final OpenAIService _openAIService = OpenAIService();
-  stt.SpeechToText _speech;
-  bool _isListening = false;
-  String _voiceInput = '';
-
+  final AuthService _authService = AuthService();
+  User? _user;
   Map<String, List<Map<String, String>>> chatHistory = {};
   String selectedCategory = 'General';
   String _errorMessage = '';
@@ -25,51 +25,19 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
   @override
   void initState() {
     super.initState();
-    chatHistory[selectedCategory] = [];
-    _speech = stt.SpeechToText();
-    _initializeSpeech();
-  }
-
-  void _initializeSpeech() async {
-    bool available = await _speech.initialize(
-      onStatus: (status) {
-        if (status == 'done') {
-          _startListening();
-        }
-      },
-      onError: (error) {
-        print("Speech recognition error: $error");
-        _startListening();
-      },
-    );
-
-    if (available) {
-      _startListening();
-    } else {
-      setState(() {
-        _errorMessage = 'Speech recognition is not available';
-      });
+    _user = FirebaseAuth.instance.currentUser;
+    if (_user != null) {
+      _loadChatHistory();
     }
   }
 
-  void _startListening() {
-    if (!_isListening) {
-      _speech.listen(
-        onResult: (result) {
-          setState(() {
-            _voiceInput = result.recognizedWords;
-          });
-
-          if (result.finalResult) {
-            _questionController.text = _voiceInput;
-            _askQuestion();
-            _voiceInput = '';
-          }
-        },
-      );
-      setState(() {
-        _isListening = true;
-      });
+  Future<void> _loadChatHistory() async {
+    if (_user != null) {
+      chatHistory = await _authService.loadCategoriesAndChatHistory(_user!.uid);
+      if (chatHistory.isEmpty) {
+        chatHistory[selectedCategory] = [];
+      }
+      setState(() {});
     }
   }
 
@@ -81,10 +49,13 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
         _questionController.clear();
       });
       try {
-        String response = await _openAIService.getResponse(question);
+        String response = await _openAIService.getResponse(chatHistory[selectedCategory].toString());
         setState(() {
           chatHistory[selectedCategory]!.add({'ai': response});
         });
+        if (_user != null) {
+          await _authService.saveCategoriesAndChatHistory(_user!.uid, chatHistory);
+        }
       } catch (e) {
         setState(() {
           _errorMessage = 'Failed to get response from OpenAI';
@@ -99,6 +70,9 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
       chatHistory[newCategory] = [];
       selectedCategory = newCategory;
     });
+    if (_user != null) {
+      _authService.saveCategoriesAndChatHistory(_user!.uid, chatHistory);
+    }
   }
 
   void _selectCategory(String category) {
@@ -116,6 +90,9 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
         selectedCategory = newCategory;
       }
     });
+    if (_user != null) {
+      _authService.saveCategoriesAndChatHistory(_user!.uid, chatHistory);
+    }
   }
 
   void _deleteCategory(String category) {
@@ -125,6 +102,17 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
         selectedCategory = chatHistory.keys.first;
       }
     });
+    if (_user != null) {
+      _authService.saveCategoriesAndChatHistory(_user!.uid, chatHistory);
+    }
+  }
+
+  void _logout() async {
+    await _authService.signOut();
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => LoginScreen()),
+    );
   }
 
   Widget _buildChatHistory() {
@@ -162,7 +150,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
 
     for (final match in matches) {
       if (match.start > currentIndex) {
-        parts.add(Text(response.substring(currentIndex, match.start)));
+        parts.add(Text(response.substring(currentIndex, match.start), style: TextStyle(fontSize: 16)));
       }
 
       final codeBlockContent = match.group(1) ?? '';
@@ -171,42 +159,75 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
       final code = lines.skip(1).join('\n');
       final highlightedCode = highlight.parse(code, language: language);
 
-      parts.add(Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      parts.add(
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.black, // Ensure the container background is black
+            borderRadius: BorderRadius.circular(4.0),
+          ),
+          margin: EdgeInsets.symmetric(vertical: 8.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                language,
-                style: TextStyle(fontWeight: FontWeight.bold),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                decoration: BoxDecoration(
+                  color: Colors.grey[850], // Title bar color
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(4.0),
+                    topRight: Radius.circular(4.0),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      language,
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                    TextButton.icon(
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: code));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Code copied to clipboard')),
+                        );
+                      },
+                      icon: Icon(Icons.copy, color: Colors.white, size: 16),
+                      label: Text('Copy code', style: TextStyle(color: Colors.white)),
+                    ),
+                  ],
+                ),
               ),
-              IconButton(
-                icon: Icon(Icons.copy),
-                onPressed: () {
-                  Clipboard.setData(ClipboardData(text: code));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Code copied to clipboard')),
-                  );
-                },
+              Container(
+                padding: EdgeInsets.all(8.0),
+                decoration: BoxDecoration(
+                  color: Colors.black,
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(4.0),
+                    bottomRight: Radius.circular(4.0),
+                  ),
+                ),
+                child: HighlightView(
+                  code,
+                  language: highlightedCode.language ?? 'plaintext',
+                  theme: atomOneDarkTheme, // Use a dark theme
+                  padding: EdgeInsets.all(8),
+                  textStyle: TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 14,
+                  ),
+                ),
               ),
             ],
           ),
-          HighlightView(
-            code,
-            language: highlightedCode.language ?? 'plaintext',
-            theme: githubTheme,
-            padding: EdgeInsets.all(8),
-            textStyle: TextStyle(fontFamily: 'monospace', fontSize: 12),
-          ),
-        ],
-      ));
+        ),
+      );
 
       currentIndex = match.end;
     }
 
     if (currentIndex < response.length) {
-      parts.add(Text(response.substring(currentIndex)));
+      parts.add(Text(response.substring(currentIndex), style: TextStyle(fontSize: 16)));
     }
 
     return parts;
@@ -303,6 +324,12 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
         title: Center(
           child: Text(selectedCategory),
         ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.logout),
+            onPressed: _logout,
+          ),
+        ],
         leading: Builder(
           builder: (BuildContext context) {
             return IconButton(
@@ -331,11 +358,6 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
                 errorText: _errorMessage.isNotEmpty ? _errorMessage : null,
               ),
               onSubmitted: (_) => _askQuestion(),
-            ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _askQuestion,
-              child: Text('Ask'),
             ),
           ],
         ),

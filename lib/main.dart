@@ -2,8 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-// import 'package:ai_assistant/screens/login_screen.dart';
-import 'package:ai_assistant/screens/ai_assistant_screen.dart';
+import 'package:ai_assistant/screens/login_screen.dart';
+//import 'package:ai_assistant/screens/ai_assistant_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,8 +21,8 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      // home: LoginScreen(),
-      home: AiAssistantScreen(),
+      home: LoginScreen(),
+      //home: AiAssistantScreen(),
     );
   }
 }

@@ -1,16 +1,21 @@
 import 'dart:convert';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:http/http.dart' as http;
 
 class OpenAIService {
-  final String _apiKey = '';
-
+  Future<String> _loadApiKey() async {
+    final String response = await rootBundle.loadString('assets/config/api-key.json');
+    final data = json.decode(response);
+    return data['openai_api_key'];
+  }
   Future<String> getResponse(String prompt) async {
     try {
+      String apiKey = await _loadApiKey();
       final response = await http.post(
         Uri.parse('https://api.openai.com/v1/chat/completions'),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $_apiKey',
+          'Authorization': 'Bearer $apiKey',
         },
         body: jsonEncode({
           'model': 'gpt-4o', // Specify the model here
@@ -19,7 +24,7 @@ class OpenAIService {
       );
 
       if (response.statusCode == 200) {
-        var data = jsonDecode(response.body);
+        var data = jsonDecode(utf8.decode(response.bodyBytes));
         // return jsonEncode(data);
         return data['choices'][0]['message']['content'];
       } else {
