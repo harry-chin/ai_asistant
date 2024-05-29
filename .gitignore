@@ -1,3 +1,5 @@
+# API Key
+/assets/config/api-keys.json
 # Miscellaneous
 *.class
 *.log
