@@ -1,5 +1,5 @@
 # API Key
-api-keys.json
+/api-keys.json
 # Miscellaneous
 *.class
 *.log
