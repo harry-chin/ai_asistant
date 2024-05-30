@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 
 class OpenAIService {
   Future<String> _loadApiKey() async {
-    final String response = await rootBundle.loadString('assets/config/api-key.json');
+    final String response = await rootBundle.loadString('assets/config/api-keys.json');
     final data = json.decode(response);
     return data['openai_api_key'];
   }

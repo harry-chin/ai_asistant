@@ -15,11 +15,12 @@ class AiAssistantScreen extends StatefulWidget {
 
 class _AiAssistantScreenState extends State<AiAssistantScreen> {
   final TextEditingController _questionController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   final OpenAIService _openAIService = OpenAIService();
   final AuthService _authService = AuthService();
   User? _user;
   Map<String, List<Map<String, String>>> chatHistory = {};
-  String selectedCategory = 'General';
+  String selectedCategory = '';
   String _errorMessage = '';
 
   @override
@@ -35,10 +36,22 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
     if (_user != null) {
       chatHistory = await _authService.loadCategoriesAndChatHistory(_user!.uid);
       if (chatHistory.isEmpty) {
-        chatHistory[selectedCategory] = [];
+        chatHistory['General'] = [];
+        selectedCategory = 'General';
+      } else {
+        selectedCategory = chatHistory.keys.last;
       }
       setState(() {});
+      _scrollToBottom();
     }
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance?.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+      }
+    });
   }
 
   void _askQuestion() async {
@@ -61,6 +74,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
           _errorMessage = 'Failed to get response from OpenAI';
         });
       }
+      _scrollToBottom();
     }
   }
 
@@ -80,6 +94,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
       selectedCategory = category;
       Navigator.pop(context); // Close the drawer when a category is selected
     });
+    _scrollToBottom();
   }
 
   void _editCategory(String oldCategory, String newCategory) {
@@ -95,15 +110,15 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
     }
   }
 
-  void _deleteCategory(String category) {
+  void _deleteCategory(String category) async {
     setState(() {
       chatHistory.remove(category);
       if (selectedCategory == category) {
-        selectedCategory = chatHistory.keys.first;
+        selectedCategory = chatHistory.keys.isEmpty ? '' : chatHistory.keys.last;
       }
     });
     if (_user != null) {
-      _authService.saveCategoriesAndChatHistory(_user!.uid, chatHistory);
+      await _authService.saveCategoriesAndChatHistory(_user!.uid, chatHistory);
     }
   }
 
@@ -118,6 +133,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
   Widget _buildChatHistory() {
     final messages = chatHistory[selectedCategory] ?? [];
     return ListView.builder(
+      controller: _scrollController,
       itemCount: messages.length,
       itemBuilder: (context, index) {
         final message = messages[index];
@@ -162,7 +178,6 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
       parts.add(
         Container(
           decoration: BoxDecoration(
-            color: Colors.black, // Ensure the container background is black
             borderRadius: BorderRadius.circular(4.0),
           ),
           margin: EdgeInsets.symmetric(vertical: 8.0),
@@ -199,9 +214,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
                 ),
               ),
               Container(
-                padding: EdgeInsets.all(8.0),
                 decoration: BoxDecoration(
-                  color: Colors.black,
                   borderRadius: BorderRadius.only(
                     bottomLeft: Radius.circular(4.0),
                     bottomRight: Radius.circular(4.0),
@@ -325,6 +338,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
           child: Text(selectedCategory),
         ),
         actions: [
+          Text(_user?.email ?? ''),
           IconButton(
             icon: Icon(Icons.logout),
             onPressed: _logout,
