@@ -8,7 +8,7 @@ class OpenAIService {
     final data = json.decode(response);
     return data['openai_api_key'];
   }
-  Future<String> getResponse(String prompt) async {
+Future<String> getResponse(String prompt, String model) async {
     try {
       String apiKey = await _loadApiKey();
       final response = await http.post(
@@ -18,14 +18,13 @@ class OpenAIService {
           'Authorization': 'Bearer $apiKey',
         },
         body: jsonEncode({
-          'model': 'gpt-4o', // Specify the model here
+          'model': model, // Use the model parameter
           'messages': [{"role": "user", "content": prompt}],
         }),
       );
 
       if (response.statusCode == 200) {
         var data = jsonDecode(utf8.decode(response.bodyBytes));
-        // return jsonEncode(data);
         return data['choices'][0]['message']['content'];
       } else {
         throw Exception('Failed to load post ${response.statusCode}');

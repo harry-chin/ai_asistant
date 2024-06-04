@@ -22,6 +22,8 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
   Map<String, List<Map<String, String>>> chatHistory = {};
   String selectedCategory = '';
   String _errorMessage = '';
+  String selectedModel = 'gpt-4o';  // Default selected model
+  List<String> models = ['gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo']; // Available models
 
   @override
   void initState() {
@@ -62,7 +64,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
         _questionController.clear();
       });
       try {
-        String response = await _openAIService.getResponse(chatHistory[selectedCategory].toString());
+        String response = await _openAIService.getResponse(chatHistory[selectedCategory].toString(), selectedModel);
         setState(() {
           chatHistory[selectedCategory]!.add({'ai': response});
         });
@@ -139,7 +141,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
         final message = messages[index];
         if (message.containsKey('user')) {
           return ListTile(
-            title: Text(message['user']!, style: TextStyle(fontWeight: FontWeight.bold)),
+            title: SelectableText(message['user']!, style: TextStyle(fontWeight: FontWeight.bold)),
           );
         } else {
           return _buildAiResponse(message['ai']!);
@@ -166,7 +168,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
 
     for (final match in matches) {
       if (match.start > currentIndex) {
-        parts.add(Text(response.substring(currentIndex, match.start), style: TextStyle(fontSize: 16)));
+        parts.add(SelectableText(response.substring(currentIndex, match.start), style: TextStyle(fontSize: 16)));
       }
 
       final codeBlockContent = match.group(1) ?? '';
@@ -240,7 +242,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
     }
 
     if (currentIndex < response.length) {
-      parts.add(Text(response.substring(currentIndex), style: TextStyle(fontSize: 16)));
+      parts.add(SelectableText(response.substring(currentIndex), style: TextStyle(fontSize: 16)));
     }
 
     return parts;
@@ -338,6 +340,20 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
           child: Text(selectedCategory),
         ),
         actions: [
+          DropdownButton<String>(
+            value: selectedModel,
+            onChanged: (String? newValue) {
+              setState(() {
+                selectedModel = newValue!;
+              });
+            },
+            items: models.map<DropdownMenuItem<String>>((String model) {
+              return DropdownMenuItem<String>(
+                value: model,
+                child: Text(model), 
+              );
+            }).toList(),
+          ),
           Text(_user?.email ?? ''),
           IconButton(
             icon: Icon(Icons.logout),

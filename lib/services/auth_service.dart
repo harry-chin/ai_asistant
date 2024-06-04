@@ -36,7 +36,19 @@ class AuthService {
   Future<void> saveCategoriesAndChatHistory(String uid, Map<String, List<Map<String, String>>> chatHistory) async {
     await _firestore.collection('users').doc(uid).set({
       'categories': chatHistory,
-    }, SetOptions(merge: true));
+    });
+  }
+
+  Future<List<Map<String, String>>> loadChatHistoryForCategory(String uid, String category) async {
+    DocumentSnapshot doc = await _firestore.collection('users').doc(uid).get();
+    if (doc.exists) {
+      Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+      if (data['categories'] != null && data['categories'][category] != null) {
+        return List<Map<String, String>>.from(
+            data['categories'][category].map((item) => Map<String, String>.from(item)));
+      }
+    }
+    return [];
   }
 
   Future<Map<String, List<Map<String, String>>>> loadCategoriesAndChatHistory(String uid) async {
